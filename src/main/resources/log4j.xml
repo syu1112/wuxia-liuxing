@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" debug="false">
+
+    <appender name="CONSOLE" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out" />
+        <param name="Threshold" value="DEBUG" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d [%l]-[%p] %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="CONSOLE_ERROR" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out" />
+        <param name="Threshold" value="ERROR" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d [%l]-[%p] %m%n" />
+        </layout>
+    </appender>
+
+    <appender name="DAILY_LOG" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="File" value="/home/wuxia/wuxia-liuxing/logs/daily.log" />
+        <param name="Append" value="true" />
+        <param name="DatePattern" value="'.'yyyy-MM-dd" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss,SSS}:[%p] %m%n" />
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelRangeFilter">
+            <param name="LevelMin" value="INFO" />
+            <param name="LevelMax" value="FATAL" />
+        </filter>
+    </appender>
+
+    <logger name="com.wuxia">
+        <level value="INFO" />
+        <appender-ref ref="DAILY_LOG" />
+    </logger>
+
+    <logger name="com.wuxia">
+        <level value="DEBUG" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+
+    <root>
+        <priority value="ERROR" />
+        <appender-ref ref="CONSOLE_ERROR" />
+    </root>
+
+</log4j:configuration>

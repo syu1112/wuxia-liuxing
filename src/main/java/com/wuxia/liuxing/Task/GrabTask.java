@@ -15,7 +15,7 @@ public class GrabTask implements ITask {
 
     public void run() {
         logger.debug("grab task run...");
-//        GrabService service = new GrabServiceImpl();
-//        service.tdliuxing();
+        GrabService service = new GrabServiceImpl();
+        service.tdliuxing();
     }
 }

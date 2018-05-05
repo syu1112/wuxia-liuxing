@@ -6,6 +6,7 @@ import com.jfinal.kit.Prop;
 import com.jfinal.kit.PropKit;
 import com.jfinal.plugin.cron4j.Cron4jPlugin;
 import com.jfinal.template.Engine;
+import com.wuxia.liuxing.Task.ClearTask;
 import com.wuxia.liuxing.Task.GrabTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ public class JfConfig extends JFinalConfig {
         //周日全天提醒
         cp.addTask("*/3 * * * sun", new GrabTask());
         //每日清除一次内存
-        cp.addTask("0 0 * * *", new GrabTask());
+        cp.addTask("0 0 * * *", new ClearTask());
         plugins.add(cp);
         logger.debug("jfinal plugin, add task:{}", "grabTask");
     }

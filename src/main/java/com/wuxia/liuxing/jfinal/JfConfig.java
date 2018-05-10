@@ -8,6 +8,7 @@ import com.jfinal.plugin.cron4j.Cron4jPlugin;
 import com.jfinal.template.Engine;
 import com.wuxia.liuxing.Task.ClearTask;
 import com.wuxia.liuxing.Task.GrabTask;
+import com.wuxia.liuxing.Task.IPProxyTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +41,13 @@ public class JfConfig extends JFinalConfig {
     public void configPlugin(Plugins plugins) {
         Cron4jPlugin cp = new Cron4jPlugin();
 
-        //周一至周六，18-23点提醒
-        cp.addTask("*/3 18-23 * * mon-sat", new GrabTask());
-        //周日全天提醒
-        cp.addTask("*/3 * * * sun", new GrabTask());
+        cp.addTask("* * * * *", new GrabTask());
+//        //周一至周六，18-23点提醒
+//        cp.addTask("*/2 18-23 * * mon-sat", new GrabTask());
+//        //周日全天提醒
+//        cp.addTask("*/2 * * * sun", new GrabTask());
+//        //每日重新拉取一次IP代理库
+//        cp.addTask("0 0 * * *", new IPProxyTask());
         //每日清除一次内存
         cp.addTask("0 0 * * *", new ClearTask());
         plugins.add(cp);

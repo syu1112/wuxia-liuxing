@@ -5,9 +5,18 @@ import com.wuxia.liuxing.common.MD5Codec;
 import com.wuxia.liuxing.kit.HttpKit;
 import com.wuxia.liuxing.kit.MailKit;
 import com.wuxia.liuxing.kit.XmlKit;
+import com.wuxia.liuxing.proxy.IPModel.IPMessage;
+import com.wuxia.liuxing.proxy.database.MyRedis;
+import com.wuxia.liuxing.proxy.htmlparse.URLFecter;
+import com.wuxia.liuxing.proxy.httpbrowser.MyHttpResponse;
+import com.wuxia.liuxing.proxy.ipfilter.IPFilter;
+import com.wuxia.liuxing.proxy.ipfilter.IPUtils;
 import com.wuxia.liuxing.service.GrabService;
 import org.apache.commons.mail.EmailException;
 import org.dom4j.Element;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +28,7 @@ import java.util.regex.Pattern;
 public class GrabServiceImpl implements GrabService {
     private static Logger logger = LoggerFactory.getLogger(GrabServiceImpl.class);
     private static String url_tdliuxing = Constant.config.get("url.tdliuxing");
+    private static IPMessage ipMessage = null;
     /**
      * 抓取tdliuxing.com的流行列表数据,并将抓取结果发送至指定邮箱
      * @return
@@ -32,8 +42,34 @@ public class GrabServiceImpl implements GrabService {
             for(String key: services.keySet()) {
                 String serviceId = key;
                 String serviceName = services.get(key).toString();
+
+                String html = "";
+                if(ipMessage==null) {
+                    //使用本机ip爬取xici代理网第一页
+                    List<IPMessage> ipMessages = new ArrayList<IPMessage>();
+                    ipMessages = URLFecter.urlParse(ipMessages);
+                    //对得到的IP进行筛选，将IP速度在两秒以内的并且类型是https的留下，其余删除
+                    ipMessages = IPFilter.Filter(ipMessages);
+                    for(IPMessage data : ipMessages) {
+                        html = MyHttpResponse.getHtml(url_tdliuxing + serviceId, data.getIPAddress(), data.getIPPort());
+                        if(null==html || "".equals(html) || html.contains("Unauthorized ...")) {
+                            continue;
+                        }else {
+                            ipMessage = data;
+                            System.out.println("ipMessage:"+ipMessage.toString());
+                            break;
+                        }
+                    }
+                }else {
+                    html = MyHttpResponse.getHtml(url_tdliuxing + serviceId, ipMessage.getIPAddress(), ipMessage.getIPPort());
+                }
+                if(null==html || "".equals(html) || html.contains("Unauthorized ...")) {
+                    System.err.println("代理IP不可用："+ipMessage!=null?ipMessage.toString():"localhost");
+                    ipMessage = null;
+                    continue;
+                }
                 //解析网页
-                List<Map<String, Object>> dataList = match(HttpKit.sendGet(url_tdliuxing + serviceId), yyyyMMdd);
+                List<Map<String, Object>> dataList = match(html, yyyyMMdd);
                 if (dataList.size()==0) {
                     logger.debug("grab tdliuxing,not matcher,serviceName:{}", serviceName);
                     continue;
@@ -55,40 +91,24 @@ public class GrabServiceImpl implements GrabService {
      * @return
      */
     private static List<Map<String, Object>> match(String result, String yyyyMMdd) {
-        //正则匹配结果
+        Document document = Jsoup.parse(result);
+        Elements trs = document.select("div[class=col-md-8 stats-info stats-last widget-shadow]").get(0).select("table").select("tbody").select("tr[style=color:red]");
         List<Map<String, Object>> dataList = new ArrayList<Map<String, Object>>();
-        String regex = "<div class=\"col-md-8 stats-info stats-last widget-shadow\">(.*?)</div>";
-        Matcher matcher = Pattern.compile(regex).matcher(result);
-        if (matcher.find()) {
-            String tableResult = matcher.group(1);
-            String tbodyReg = "<tr.*?style=\"color:red\">(.*?)</tr>";
-            Matcher m = Pattern.compile(tbodyReg).matcher(tableResult);
-            while (m.find()) {
-                String trResult = m.group(1);
-                //判断此条信息今天是否已通知过
-                String encode = MD5Codec.encode(yyyyMMdd + trResult);
-                if(Constant.sendedSet.contains(encode)) {
-                    continue;
-                }
-                Constant.sendedSet.add(encode);
-                //解析tr标签
-                String tdReg = "<td>.*?<b>(.*?)</b>.*?</td>";
-                Matcher mt = Pattern.compile(tdReg).matcher(trResult);
-                Map<String, Object> dataMap = new HashMap<String, Object>();
-                int index = 0;
-                while (mt.find()) {
-                    String tdResult = mt.group(1);
-                    if(index==0) {
-                        dataMap.put("product", tdResult);
-                    }else if(index==1) {
-                        dataMap.put("time", tdResult);
-                    }else if(index==2) {
-                        dataMap.put("desc", tdResult);
-                    }
-                    index++;
-                }
-                dataList.add(dataMap);
+        for(org.jsoup.nodes.Element element: trs) {
+            Elements td = element.select("td");
+            //判断此条信息今天是否已通知过
+            String trStr = td.get(0).text() + td.get(1).text() + td.get(2).text();
+            String encode = MD5Codec.encode(yyyyMMdd + trStr);
+            if(Constant.sendedSet.contains(encode)) {
+                continue;
             }
+            Constant.sendedSet.add(encode);
+            //存入
+            Map<String, Object> dataMap = new HashMap<String, Object>();
+            dataMap.put("product", td.get(0).text());
+            dataMap.put("time", td.get(1).text());
+            dataMap.put("desc", td.get(2).text());
+            dataList.add(dataMap);
         }
         return dataList;
     }

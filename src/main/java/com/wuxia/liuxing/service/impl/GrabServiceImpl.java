@@ -52,7 +52,7 @@ public class GrabServiceImpl implements GrabService {
                     ipMessages = IPFilter.Filter(ipMessages);
                     for(IPMessage data : ipMessages) {
                         html = MyHttpResponse.getHtml(url_tdliuxing + serviceId, data.getIPAddress(), data.getIPPort());
-                        if(null==html || "".equals(html) || html.contains("Unauthorized ...")) {
+                        if(null==html || "".equals(html) || !html.contains("天涯明月刀流行跑商网")) {
                             continue;
                         }else {
                             ipMessage = data;
@@ -63,7 +63,7 @@ public class GrabServiceImpl implements GrabService {
                 }else {
                     html = MyHttpResponse.getHtml(url_tdliuxing + serviceId, ipMessage.getIPAddress(), ipMessage.getIPPort());
                 }
-                if(null==html || "".equals(html) || html.contains("Unauthorized ...")) {
+                if(null==html || "".equals(html) || !html.contains("天涯明月刀流行跑商网")) {
                     System.err.println("代理IP不可用："+ipMessage!=null?ipMessage.toString():"localhost");
                     ipMessage = null;
                     continue;
@@ -82,6 +82,7 @@ public class GrabServiceImpl implements GrabService {
             }
         } catch (Exception e) {
             logger.error("grab tdliuxing,exception:{}", e);
+            ipMessage = null;
             e.printStackTrace();
         }
     }
